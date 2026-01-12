@@ -24,6 +24,7 @@ export default function Product() {
   const [loading, setLoading] = useState(!product)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   // Extract available sizes and frames from variants
   const { sizes, frames } = useMemo(() => {
@@ -156,13 +157,14 @@ export default function Product() {
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Frame Preview */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center">
             <div
-              className="frame-preview relative transition-all duration-300 rounded-lg overflow-hidden p-5"
+              className="frame-preview relative transition-all duration-300 rounded-lg overflow-hidden p-5 cursor-zoom-in group"
               style={{
                 backgroundColor: frameColor,
                 boxShadow: 'inset 0 0 20px rgba(0,0,0,0.15), 0 10px 40px rgba(0,0,0,0.2)'
               }}
+              onClick={() => setLightboxOpen(true)}
             >
               <div className="bg-white p-1 shadow-inner">
                 <div className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 overflow-hidden bg-gray-100">
@@ -171,9 +173,18 @@ export default function Product() {
                     alt={product.title}
                     className="w-full h-full object-cover"
                   />
+                  {/* Zoom hint overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
+                    <svg className="w-10 h-10 text-white opacity-0 group-hover:opacity-80 transition-opacity drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
+            <p className="text-center text-xs mt-3 text-gray-400">
+              Click image to enlarge
+            </p>
           </div>
 
           {/* Details */}
@@ -265,6 +276,33 @@ export default function Product() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2 z-10"
+            aria-label="Close lightbox"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={product.featuredImage}
+            alt={product.title}
+            className="max-w-full max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+            Click outside or ✕ to close
+          </p>
+        </div>
+      )}
     </main>
   )
 }
