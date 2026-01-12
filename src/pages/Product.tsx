@@ -198,11 +198,6 @@ export default function Product() {
               ${price.toFixed(2)}
             </p>
 
-            {/* Description */}
-            <div className="mb-6">
-              <p className="text-gray-600">{product.description}</p>
-            </div>
-
             {/* Options Card */}
             <div className="rounded-xl p-5 mb-6 bg-white border border-gray-200">
               {/* Size Dropdown */}
@@ -274,6 +269,57 @@ export default function Product() {
             <p className="text-center text-xs mt-3 text-gray-400">
               Free shipping on orders over $100
             </p>
+          </div>
+        </div>
+
+        {/* Details Section - Below the fold */}
+        <div className="mt-12 border-t border-gray-200 pt-8">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Product Details */}
+            <div>
+              <h2 className="text-lg font-semibold mb-3 text-gray-800">
+                Product Details
+              </h2>
+              {product.productType && (
+                <div className="text-sm mb-2 text-gray-500">
+                  <span className="font-medium">Category:</span> {product.productType}
+                </div>
+              )}
+              {product.description && (
+                <p className="leading-relaxed text-gray-600 mb-4">
+                  {product.description}
+                </p>
+              )}
+
+              {/* Tags */}
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {product.tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Shipping & Returns */}
+            <div>
+              <h2 className="text-lg font-semibold mb-3 text-gray-800">
+                Shipping & Returns
+              </h2>
+              <p className="text-sm leading-relaxed mb-4 text-gray-600">
+                Free standard shipping on orders over $100. Orders are processed
+                within 1-2 business days. Delivery typically takes 5-7 business days.
+              </p>
+              <p className="text-sm leading-relaxed text-gray-600">
+                We accept returns within 30 days of purchase. Items must be unused
+                and in original packaging. Contact us to start a return.
+              </p>
+            </div>
           </div>
         </div>
       </div>
