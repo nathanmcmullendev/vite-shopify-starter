@@ -1,8 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useLocation, Link } from 'react-router-dom'
 import { fetchProduct } from '../lib/shopify'
 import { useCartDispatch } from '../context/CartContext'
 import type { Product as ProductType } from '../types'
+
+// Frame color mapping for preview
+const frameColors: Record<string, string> = {
+  'Unframed': '#f5f5f5',
+  'Black Frame': '#1a1a1a',
+  'White Frame': '#ffffff',
+  'Natural Wood': '#c4a574',
+}
 
 export default function Product() {
   const { handle } = useParams<{ handle: string }>()
@@ -15,8 +23,48 @@ export default function Product() {
   )
   const [loading, setLoading] = useState(!product)
   const [error, setError] = useState<string | null>(null)
-  const [selectedVariant, setSelectedVariant] = useState(0)
   const [adding, setAdding] = useState(false)
+
+  // Extract available sizes and frames from variants
+  const { sizes, frames } = useMemo(() => {
+    if (!product?.variants) return { sizes: [] as string[], frames: [] as string[] }
+
+    const sizeSet = new Set<string>()
+    const frameSet = new Set<string>()
+
+    product.variants.forEach(v => {
+      // Parse variant title like "8×10 / Black Frame"
+      const parts = v.title.split(' / ')
+      if (parts[0]) sizeSet.add(parts[0])
+      if (parts[1]) frameSet.add(parts[1])
+    })
+
+    return {
+      sizes: Array.from(sizeSet),
+      frames: Array.from(frameSet)
+    }
+  }, [product?.variants])
+
+  // Selected options
+  const [selectedSize, setSelectedSize] = useState('')
+  const [selectedFrame, setSelectedFrame] = useState('')
+
+  // Set initial selections when product loads
+  useEffect(() => {
+    if (sizes.length > 0 && !selectedSize) setSelectedSize(sizes[0])
+    if (frames.length > 0 && !selectedFrame) setSelectedFrame(frames[0])
+  }, [sizes, frames, selectedSize, selectedFrame])
+
+  // Find matching variant
+  const selectedVariant = useMemo(() => {
+    if (!product?.variants || !selectedSize) return product?.variants?.[0]
+
+    const targetTitle = frames.length > 0
+      ? `${selectedSize} / ${selectedFrame}`
+      : selectedSize
+
+    return product.variants.find(v => v.title === targetTitle) || product.variants[0]
+  }, [product?.variants, selectedSize, selectedFrame, frames.length])
 
   useEffect(() => {
     if (product || !handle) return
@@ -41,24 +89,23 @@ export default function Product() {
   }, [handle, product])
 
   const handleAddToCart = () => {
-    if (!product) return
+    if (!product || !selectedVariant) return
 
     setAdding(true)
-    const variant = product.variants[selectedVariant]
 
     dispatch({
       type: 'ADD_ITEM',
       payload: {
         productId: product.handle,
-        variantId: variant.id,
+        variantId: selectedVariant.id,
         title: product.title,
-        variantTitle: variant.title,
+        variantTitle: selectedVariant.title,
         image: product.featuredImage,
-        price: parseFloat(variant.price)
+        price: parseFloat(selectedVariant.price)
       }
     })
 
-    setTimeout(() => setAdding(false), 500)
+    setTimeout(() => setAdding(false), 2000)
   }
 
   if (loading) {
@@ -93,8 +140,9 @@ export default function Product() {
     )
   }
 
-  const currentVariant = product.variants[selectedVariant]
-  const price = parseFloat(currentVariant?.price || product.priceRange.minPrice)
+  const price = selectedVariant ? parseFloat(selectedVariant.price) : parseFloat(product.priceRange.minPrice)
+  const frameColor = frameColors[selectedFrame] || '#f5f5f5'
+  const hasFrameOptions = frames.length > 0
 
   return (
     <main className="min-h-screen bg-gray-50 py-8">
@@ -107,13 +155,25 @@ export default function Product() {
         </nav>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Image */}
-          <div className="aspect-square rounded-xl overflow-hidden bg-white">
-            <img
-              src={product.featuredImage}
-              alt={product.title}
-              className="w-full h-full object-cover"
-            />
+          {/* Frame Preview */}
+          <div className="flex justify-center">
+            <div
+              className="frame-preview relative transition-all duration-300 rounded-lg overflow-hidden p-5"
+              style={{
+                backgroundColor: frameColor,
+                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.15), 0 10px 40px rgba(0,0,0,0.2)'
+              }}
+            >
+              <div className="bg-white p-1 shadow-inner">
+                <div className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 overflow-hidden bg-gray-100">
+                  <img
+                    src={product.featuredImage}
+                    alt={product.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Details */}
@@ -131,38 +191,77 @@ export default function Product() {
               <p className="text-gray-600">{product.description}</p>
             </div>
 
-            {/* Variants */}
-            {product.variants.length > 1 && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Option
-                </label>
-                <select
-                  value={selectedVariant}
-                  onChange={(e) => setSelectedVariant(Number(e.target.value))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                >
-                  {product.variants.map((variant, idx) => (
-                    <option key={variant.id} value={idx}>
-                      {variant.title} - ${parseFloat(variant.price).toFixed(2)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Options Card */}
+            <div className="rounded-xl p-5 mb-6 bg-white border border-gray-200">
+              {/* Size Dropdown */}
+              {sizes.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Print Size
+                  </label>
+                  <select
+                    value={selectedSize}
+                    onChange={(e) => setSelectedSize(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-lg cursor-pointer text-base font-medium transition-colors border-gray-200 bg-white text-gray-800 focus:border-primary focus:outline-none"
+                  >
+                    {sizes.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Frame Dropdown */}
+              {hasFrameOptions && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Frame Style
+                  </label>
+                  <select
+                    value={selectedFrame}
+                    onChange={(e) => setSelectedFrame(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-lg cursor-pointer text-base font-medium transition-colors border-gray-200 bg-white text-gray-800 focus:border-primary focus:outline-none"
+                  >
+                    {frames.map(frame => (
+                      <option key={frame} value={frame}>{frame}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Frame Color Preview */}
+              {hasFrameOptions && (
+                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
+                  <span
+                    className="w-8 h-8 rounded border border-gray-300 shadow-inner"
+                    style={{ backgroundColor: frameColor }}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">{selectedFrame}</p>
+                    <p className="text-xs text-gray-400">{selectedSize} print</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Add to Cart */}
             <button
               onClick={handleAddToCart}
-              disabled={adding || !currentVariant?.availableForSale}
+              disabled={adding || !selectedVariant?.availableForSale}
               className={`w-full py-4 rounded-xl font-semibold text-lg text-white transition-all ${
-                adding || !currentVariant?.availableForSale
+                adding
+                  ? 'bg-green-600'
+                  : !selectedVariant?.availableForSale
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-primary hover:bg-primary-dark'
               }`}
             >
-              {adding ? 'Added!' : currentVariant?.availableForSale ? 'Add to Cart' : 'Out of Stock'}
+              {adding ? '✓ Added to Cart' : selectedVariant?.availableForSale ? 'Add to Cart' : 'Out of Stock'}
             </button>
+
+            <p className="text-center text-xs mt-3 text-gray-400">
+              Free shipping on orders over $100
+            </p>
           </div>
         </div>
       </div>
