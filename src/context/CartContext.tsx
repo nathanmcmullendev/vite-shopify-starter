@@ -107,7 +107,7 @@ export function CartProvider({ children }: CartProviderProps) {
 
   useEffect(() => {
     saveCartToStorage(cart)
-  }, [cart.items])
+  }, [cart])
 
   const total = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0)
@@ -127,6 +127,7 @@ export function CartProvider({ children }: CartProviderProps) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCart(): CartContextValue {
   const cart = useContext(CartContext)
   if (cart === null) {
@@ -135,6 +136,7 @@ export function useCart(): CartContextValue {
   return cart
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCartDispatch(): Dispatch<CartAction> {
   const dispatch = useContext(CartDispatchContext)
   if (dispatch === null) {
