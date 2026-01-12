@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getResizedImage, IMAGE_SIZES } from '../../utils/images'
 import type { Product } from '../../types'
 
 interface ProductCardProps {
@@ -31,7 +32,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           <>
             {!isLoaded && <div className="absolute inset-0 skeleton-pulse" />}
             <img
-              src={product.featuredImage}
+              src={getResizedImage(product.featuredImage, IMAGE_SIZES.thumbnail)}
               alt={product.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading={priority ? "eager" : "lazy"}

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, useLocation, Link } from 'react-router-dom'
 import { fetchProduct } from '../lib/shopify'
 import { useCartDispatch } from '../context/CartContext'
+import { getResizedImage, IMAGE_SIZES } from '../utils/images'
 import type { Product as ProductType } from '../types'
 
 // Frame color mapping for preview
@@ -169,7 +170,7 @@ export default function Product() {
               <div className="bg-white p-1 shadow-inner">
                 <div className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 overflow-hidden bg-gray-100">
                   <img
-                    src={product.featuredImage}
+                    src={getResizedImage(product.featuredImage, IMAGE_SIZES.preview)}
                     alt={product.title}
                     className="w-full h-full object-cover"
                   />
@@ -293,7 +294,7 @@ export default function Product() {
             </svg>
           </button>
           <img
-            src={product.featuredImage}
+            src={getResizedImage(product.featuredImage, IMAGE_SIZES.full)}
             alt={product.title}
             className="max-w-full max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
