@@ -118,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       details: {
         hasStore: !!SHOPIFY_STORE,
         hasToken: !!SHOPIFY_ADMIN_TOKEN,
-      }
+      },
     })
   }
 
@@ -129,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!email || !lineItems?.length || !shippingAddress || !paymentIntentId) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['email', 'lineItems', 'shippingAddress', 'paymentIntentId']
+        required: ['email', 'lineItems', 'shippingAddress', 'paymentIntentId'],
       })
     }
 
@@ -160,9 +160,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Step 1: Create draft order
-    console.log('Creating draft order...')
+    // Creating draft order
     const createResult = await shopifyAdminRequest(DRAFT_ORDER_CREATE, {
-      input: draftOrderInput
+      input: draftOrderInput,
     })
 
     if (createResult.data?.draftOrderCreate?.userErrors?.length > 0) {
@@ -170,7 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Draft order creation errors:', errors)
       return res.status(400).json({
         error: 'Failed to create draft order',
-        details: errors
+        details: errors,
       })
     }
 
@@ -179,16 +179,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('No draft order ID returned:', createResult)
       return res.status(500).json({
         error: 'Draft order creation failed',
-        details: createResult
+        details: createResult,
       })
     }
 
-    console.log('Draft order created:', draftOrderId)
+    console.warn('Draft order created:', draftOrderId)
 
     // Step 2: Complete draft order (marks as paid)
-    console.log('Completing draft order...')
+    // Completing draft order
     const completeResult = await shopifyAdminRequest(DRAFT_ORDER_COMPLETE, {
-      id: draftOrderId
+      id: draftOrderId,
     })
 
     if (completeResult.data?.draftOrderComplete?.userErrors?.length > 0) {
@@ -196,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('Draft order completion errors:', errors)
       return res.status(400).json({
         error: 'Failed to complete draft order',
-        details: errors
+        details: errors,
       })
     }
 
@@ -205,11 +205,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('No order returned:', completeResult)
       return res.status(500).json({
         error: 'Order completion failed',
-        details: completeResult
+        details: completeResult,
       })
     }
 
-    console.log('Order created successfully:', order.name)
+    console.warn('Order created successfully:', order.name)
 
     // Return success with order details
     return res.status(200).json({
@@ -221,14 +221,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         currency: order.totalPriceSet?.shopMoney?.currencyCode,
         customerEmail: order.customer?.email,
       },
-      stripePaymentIntent: paymentIntentId
+      stripePaymentIntent: paymentIntentId,
     })
-
   } catch (error) {
     console.error('Order creation error:', error)
     return res.status(500).json({
       error: 'Failed to create order',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     })
   }
 }
