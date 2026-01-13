@@ -4,8 +4,9 @@ import type { CartState, CartAction, CartContextValue } from '../types'
 const CartContext = createContext<CartContextValue | null>(null)
 const CartDispatchContext = createContext<Dispatch<CartAction> | null>(null)
 
-const CART_STORAGE_KEY = 'shopify-starter-cart'
+const CART_STORAGE_KEY = 'gallery-store-cart'
 
+// Load cart from localStorage
 function loadCartFromStorage(): CartState {
   try {
     const stored = localStorage.getItem(CART_STORAGE_KEY)
@@ -17,23 +18,24 @@ function loadCartFromStorage(): CartState {
       }
     }
   } catch (err) {
-    console.error('Failed to load cart:', err)
+    console.error('Failed to load cart from storage:', err)
   }
   return { items: [], isOpen: false }
 }
 
+// Save cart to localStorage
 function saveCartToStorage(cart: CartState): void {
   try {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: cart.items }))
   } catch (err) {
-    console.error('Failed to save cart:', err)
+    console.error('Failed to save cart to storage:', err)
   }
 }
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'ADD_ITEM': {
-      const { productId, variantId, title, variantTitle, image, price } = action.payload
+      const { productId, variantId, sizeId, frameId, title, artist, image, price } = action.payload
       const itemKey = `${productId}-${variantId}`
       const existingIndex = state.items.findIndex(item => item.key === itemKey)
 
@@ -52,8 +54,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           key: itemKey,
           productId,
           variantId,
+          sizeId,
+          frameId,
           title,
-          variantTitle,
+          artist,
           image,
           price,
           quantity: 1
@@ -61,13 +65,14 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         isOpen: true
       }
     }
-
-    case 'REMOVE_ITEM':
+    
+    case 'REMOVE_ITEM': {
       return {
         ...state,
         items: state.items.filter(item => item.key !== action.payload)
       }
-
+    }
+    
     case 'UPDATE_QUANTITY': {
       const { key, quantity } = action.payload
       if (quantity <= 0) {
@@ -83,16 +88,19 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         )
       }
     }
-
-    case 'TOGGLE_CART':
+    
+    case 'TOGGLE_CART': {
       return { ...state, isOpen: !state.isOpen }
-
-    case 'CLOSE_CART':
+    }
+    
+    case 'CLOSE_CART': {
       return { ...state, isOpen: false }
-
-    case 'CLEAR_CART':
+    }
+    
+    case 'CLEAR_CART': {
       return { ...state, items: [] }
-
+    }
+    
     default:
       return state
   }
@@ -104,20 +112,22 @@ interface CartProviderProps {
 
 export function CartProvider({ children }: CartProviderProps) {
   const [cart, dispatch] = useReducer(cartReducer, null, loadCartFromStorage)
-
+  
+  // Save to localStorage whenever cart items change
   useEffect(() => {
     saveCartToStorage(cart)
-  }, [cart])
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.items])
+  
   const total = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0)
-
+  
   const value: CartContextValue = {
     ...cart,
     total,
     itemCount
   }
-
+  
   return (
     <CartContext.Provider value={value}>
       <CartDispatchContext.Provider value={dispatch}>

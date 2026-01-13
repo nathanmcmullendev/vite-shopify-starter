@@ -1,7 +1,18 @@
-node_modules/
-dist/
-.env.local
-.env
-.DS_Store
-*.log
+node_modules/ 
+dist/ 
+.env.local 
+.env 
+.DS_Store 
+*.log 
 .vercel
+.env*.local
+.env.vercel
+.env.verify
+
+# Claude temp files
+tmpclaude-*-cwd
+nul
+.claude/settings.local.json
+
+# Exports (generated data)
+exports/

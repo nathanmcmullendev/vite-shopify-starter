@@ -15,7 +15,7 @@ export function ShopifyProvider({ children }: ShopifyProviderProps) {
 
   // If Shopify isn't configured, render children without providers
   if (!storeDomain || !storefrontToken) {
-    console.warn('Shopify not configured. Check .env.local file.')
+    console.warn('Shopify not configured. Running in demo mode.')
     return <>{children}</>
   }
 
@@ -27,7 +27,14 @@ export function ShopifyProvider({ children }: ShopifyProviderProps) {
       countryIsoCode="US"
       languageIsoCode="EN"
     >
-      <CartProvider>
+      <CartProvider
+        onLineAdd={() => {
+          // Cart line added - handled by UI
+        }}
+        onLineRemove={() => {
+          // Cart line removed - handled by UI
+        }}
+      >
         {children}
       </CartProvider>
     </HydrogenShopifyProvider>

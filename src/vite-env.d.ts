@@ -1,9 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_SHOPIFY_STORE: string
-  readonly VITE_SHOPIFY_STOREFRONT_TOKEN: string
-  readonly VITE_SHOPIFY_API_VERSION?: string
+  readonly VITE_CLOUDINARY_CLOUD: string
+  readonly VITE_STRIPE_PUBLIC_KEY: string
 }
 
 interface ImportMeta {

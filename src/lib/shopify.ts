@@ -1,178 +1,61 @@
-import type { Product } from '../types'
+import { createStorefrontClient } from '@shopify/hydrogen-react'
 
-// Shopify Storefront API configuration
-const SHOPIFY_STORE = import.meta.env.VITE_SHOPIFY_STORE
-const SHOPIFY_TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
-const API_VERSION = import.meta.env.VITE_SHOPIFY_API_VERSION || '2024-01'
+// Environment variables for Shopify connection (matches .env.example)
+const storeDomain = import.meta.env.VITE_SHOPIFY_STORE
+const publicStorefrontToken = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
+const storefrontApiVersion = import.meta.env.VITE_SHOPIFY_API_VERSION || '2024-01'
 
-// GraphQL query for products
-const PRODUCTS_QUERY = `
-  query getProducts($first: Int!) {
-    products(first: $first) {
-      edges {
-        node {
-          id
-          title
-          handle
-          description
-          vendor
-          productType
-          tags
-          priceRange {
-            minVariantPrice { amount }
-            maxVariantPrice { amount }
-          }
-          variants(first: 10) {
-            edges {
-              node {
-                id
-                title
-                price { amount }
-                availableForSale
-              }
-            }
-          }
-          featuredImage { url }
-          images(first: 5) {
-            edges {
-              node { url }
-            }
-          }
-        }
-      }
-    }
-  }
-`
-
-const PRODUCT_QUERY = `
-  query getProduct($handle: String!) {
-    product(handle: $handle) {
-      id
-      title
-      handle
-      description
-      vendor
-      productType
-      tags
-      priceRange {
-        minVariantPrice { amount }
-        maxVariantPrice { amount }
-      }
-      variants(first: 100) {
-        edges {
-          node {
-            id
-            title
-            price { amount }
-            availableForSale
-          }
-        }
-      }
-      featuredImage { url }
-      images(first: 10) {
-        edges {
-          node { url }
-        }
-      }
-    }
-  }
-`
-
-async function shopifyFetch<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  if (!SHOPIFY_STORE || !SHOPIFY_TOKEN) {
-    throw new Error('Shopify not configured. Check environment variables.')
-  }
-
-  const res = await fetch(
-    `https://${SHOPIFY_STORE}/api/${API_VERSION}/graphql.json`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': SHOPIFY_TOKEN,
-      },
-      body: JSON.stringify({ query, variables }),
-    }
+if (!storeDomain || !publicStorefrontToken) {
+  console.warn(
+    'Missing Shopify environment variables. Set VITE_SHOPIFY_STORE and VITE_SHOPIFY_STOREFRONT_TOKEN'
   )
-
-  if (!res.ok) {
-    throw new Error(`Shopify API error: ${res.status}`)
-  }
-
-  return res.json()
 }
 
-interface ShopifyProduct {
-  id: string
-  title: string
-  handle: string
-  description: string
-  vendor: string
-  productType: string
-  tags: string[]
-  priceRange: {
-    minVariantPrice: { amount: string }
-    maxVariantPrice: { amount: string }
+// Create the Shopify storefront client
+export const shopifyClient = createStorefrontClient({
+  storeDomain: storeDomain || 'placeholder.myshopify.com',
+  publicStorefrontToken: publicStorefrontToken || '',
+  storefrontApiVersion,
+})
+
+// Export the fetch function for GraphQL queries
+export const getStorefrontApiUrl = shopifyClient.getStorefrontApiUrl
+export const getPublicTokenHeaders = shopifyClient.getPublicTokenHeaders
+
+// Helper function to make Storefront API requests
+export async function shopifyFetch<T>({
+  query,
+  variables = {},
+}: {
+  query: string
+  variables?: Record<string, unknown>
+}): Promise<T> {
+  const response = await fetch(getStorefrontApiUrl(), {
+    method: 'POST',
+    headers: {
+      ...getPublicTokenHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Shopify API error: ${response.status} ${response.statusText}`)
   }
-  variants: {
-    edges: Array<{
-      node: {
-        id: string
-        title: string
-        price: { amount: string }
-        availableForSale: boolean
-      }
-    }>
+
+  const json = await response.json()
+
+  if (json.errors) {
+    console.error('Shopify GraphQL errors:', json.errors)
+    throw new Error(json.errors[0]?.message || 'Shopify GraphQL error')
   }
-  featuredImage: { url: string } | null
-  images: { edges: Array<{ node: { url: string } }> }
+
+  return json.data
 }
 
-function transformProduct(p: ShopifyProduct): Product {
-  return {
-    id: p.id,
-    handle: p.handle,
-    title: p.title,
-    description: p.description,
-    vendor: p.vendor,
-    productType: p.productType,
-    tags: p.tags,
-    featuredImage: p.featuredImage?.url || '/placeholder.jpg',
-    images: p.images.edges.map(e => e.node.url),
-    options: [],
-    variants: p.variants.edges.map(({ node }) => ({
-      id: node.id,
-      title: node.title,
-      price: node.price.amount,
-      availableForSale: node.availableForSale,
-      selectedOptions: []
-    })),
-    priceRange: {
-      minPrice: p.priceRange.minVariantPrice.amount,
-      maxPrice: p.priceRange.maxVariantPrice.amount
-    }
-  }
-}
-
-export async function fetchProducts(): Promise<Product[]> {
-  interface Response {
-    data: { products: { edges: Array<{ node: ShopifyProduct }> } }
-  }
-
-  const res = await shopifyFetch<Response>(PRODUCTS_QUERY, { first: 50 })
-  return res.data.products.edges.map(({ node }) => transformProduct(node))
-}
-
-export async function fetchProduct(handle: string): Promise<Product | null> {
-  interface Response {
-    data: { product: ShopifyProduct | null }
-  }
-
-  const res = await shopifyFetch<Response>(PRODUCT_QUERY, { handle })
-  return res.data.product ? transformProduct(res.data.product) : null
-}
-
-export const shopifyConfig = {
-  store: SHOPIFY_STORE,
-  isConfigured: Boolean(SHOPIFY_STORE && SHOPIFY_TOKEN),
+// Shop info for configuration
+export const shopConfig = {
+  storeDomain,
+  countryIsoCode: 'US',
+  languageIsoCode: 'EN',
 }
