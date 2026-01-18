@@ -76,9 +76,66 @@ Required access: `write_draft_orders` access scope
 
 ## Setting Up the Admin Token
 
-### Option 1: Dev Dashboard App (Recommended)
+### Token Types Explained
 
-The Dev Dashboard provides client credentials flow for headless apps.
+| Token Prefix | Source | Expiration | Best For |
+|--------------|--------|------------|----------|
+| `shpat_` | Custom App (Store Admin) | **Never expires** | Production |
+| `shpca_` | Dev App (dev.shopify.com) | ~24 hours | Testing only |
+
+**Recommendation:** Always use a Custom App (`shpat_` token) for production to avoid token expiration issues.
+
+---
+
+### Option 1: Custom App in Store Admin (Recommended)
+
+Custom Apps provide **non-expiring tokens** - set it once and forget it.
+
+#### Step 1: Enable App Development
+
+1. Go to **Shopify Admin** → **Settings** → **Apps and sales channels**
+2. Click **Develop apps**
+3. Click **Allow custom app development** (if prompted)
+
+#### Step 2: Create the Custom App
+
+1. Click **Create an app**
+2. Name it (e.g., "Headless Checkout API")
+3. Click **Create app**
+
+#### Step 3: Configure Admin API Scopes
+
+1. Click **Configure Admin API scopes**
+2. Select these scopes (at minimum):
+   - `write_draft_orders` ✅ (required)
+   - `read_draft_orders` ✅
+   - `write_orders` ✅ (required)
+   - `read_orders` ✅
+3. Click **Save**
+
+> **Tip:** For full flexibility during development, enable all scopes. You can restrict later for production.
+
+#### Step 4: Install and Get Token
+
+1. Click **Install app**
+2. Confirm installation
+3. Go to **API credentials** tab
+4. Click **Reveal token once** under "Admin API access token"
+5. **IMMEDIATELY COPY THE TOKEN** - it's only shown once!
+
+```
+shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+> ⚠️ **Warning:** If you lose this token, you must uninstall and reinstall the app to generate a new one.
+
+---
+
+### Option 2: Dev Dashboard App (Token Expires)
+
+The Dev Dashboard uses client credentials flow. **Tokens expire in ~24 hours.**
+
+Only use this for testing or if you implement automatic token refresh.
 
 #### Step 1: Create App in Dev Dashboard
 
@@ -122,18 +179,7 @@ Response:
 }
 ```
 
-**Note:** `shpca_` prefix = Client Credentials token (expires in ~24 hours)
-
-### Option 2: Custom App in Store Admin
-
-For development stores or simpler setups:
-
-1. Go to **Shopify Admin** → **Settings** → **Apps and sales channels**
-2. Click **Develop apps** → **Create an app**
-3. Configure Admin API scopes (must include `write_draft_orders`)
-4. Install and copy the Admin API access token
-
-**Note:** `shpat_` prefix = Admin API token (non-expiring)
+> ⚠️ **Note:** `shpca_` tokens expire in ~24 hours. You'll need to refresh them or implement auto-refresh logic.
 
 ---
 
@@ -146,8 +192,8 @@ Set these in Vercel (Settings → Environment Variables):
 SHOPIFY_STORE=your-store.myshopify.com
 VITE_SHOPIFY_STORE=your-store.myshopify.com
 
-# Admin API Token (for order creation)
-SHOPIFY_ADMIN_TOKEN=shpca_xxxxxxxxxxxxxxxxxxxxx
+# Admin API Token (for order creation) - USE shpat_ for production!
+SHOPIFY_ADMIN_TOKEN=shpat_xxxxxxxxxxxxxxxxxxxxx
 
 # Storefront API Token (for product fetching)
 VITE_SHOPIFY_STOREFRONT_TOKEN=xxxxxxxxxxxxxxxxxxxxx
@@ -160,8 +206,8 @@ VITE_STRIPE_PUBLIC_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxx
 ### Setting via CLI
 
 ```bash
-# Add environment variable
-echo "shpca_your_token_here" | vercel env add SHOPIFY_ADMIN_TOKEN production
+# Add environment variable (use shpat_ token from Custom App)
+echo "shpat_your_token_here" | vercel env add SHOPIFY_ADMIN_TOKEN production
 
 # Verify
 vercel env ls
@@ -284,9 +330,20 @@ Expected success response:
 
 ---
 
-## Token Refresh (Client Credentials)
+## Token Refresh
 
-`shpca_` tokens expire in ~24 hours. To refresh:
+### `shpat_` Tokens (Custom App) - No Refresh Needed ✅
+
+Custom App tokens **never expire**. This is why they're recommended for production.
+
+If you lose the token, you must:
+1. Uninstall the Custom App
+2. Reinstall it
+3. Copy the new token (shown only once)
+
+### `shpca_` Tokens (Dev App) - Refresh Every 24 Hours
+
+If using a Dev App token, refresh before expiration:
 
 ```bash
 curl -X POST "https://YOUR-STORE.myshopify.com/admin/oauth/access_token" \
@@ -296,7 +353,7 @@ curl -X POST "https://YOUR-STORE.myshopify.com/admin/oauth/access_token" \
   -d "client_secret=YOUR_CLIENT_SECRET"
 ```
 
-**For production:** Consider implementing automatic token refresh in your Vercel function or using a `shpat_` token (Custom App) which doesn't expire.
+> **Best Practice:** Avoid `shpca_` tokens in production. Use a Custom App (`shpat_`) instead.
 
 ---
 
