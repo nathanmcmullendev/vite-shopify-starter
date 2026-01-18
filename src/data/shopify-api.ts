@@ -3,7 +3,7 @@ import type { Product, Collection } from '../types'
 // Shopify Storefront API configuration
 const SHOPIFY_STORE = import.meta.env.VITE_SHOPIFY_STORE || ''
 const SHOPIFY_TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN || ''
-const API_VERSION = '2024-01'
+const API_VERSION = '2025-01'
 
 interface ShopifyVariant {
   id: string
